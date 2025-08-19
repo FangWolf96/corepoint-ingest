@@ -236,7 +236,7 @@ def download():
         _last_workbook,
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         as_attachment=True,
-        download_name=f"planka_report_{datetime.now().date()}.xlsx",
+        download_name=f"corepoint_{datetime.now().date()}.xlsx",
     )
 
 if __name__ == "__main__":
