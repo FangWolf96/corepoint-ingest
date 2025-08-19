@@ -1,0 +1,9 @@
+version: "3.9"
+services:
+  web:
+    image: planka-report:latest
+    build:
+      context: .
+    ports:
+      - "8080:8000"
+    restart: unless-stopped
