@@ -10,11 +10,17 @@ import pandas as pd
 app = Flask(__name__)
 
 # ---------- Config you can tweak ----------
-EXCLUDED_COLUMNS_FOR_AGE = {"Completed", "Canceled", "New Parts Request"}
+EXCLUDED_COLUMNS_FOR_AGE = {"Completed", "Canceled"}
 REQUESTED_LANES = [
-    "Receipt Confirmed <7 days", "Aging >7 Days", "Stale >14 Days",
-    "Assigned to Department", "Parts Ordered", "Arrived/In-Hand",
-    "Contacted", "Customer Unreachable", "Scheduled"
+    "New Parts Request - Not Done",
+    "Assigned to Department",
+    "Parts Ordered/Being Shipped",
+    "Arrived/In-Hand/At Supply Store",
+    "Left Voicemail/ Attempted to Contact",
+    "Customer Unreachable ( Called more than 3X)",
+    "Scheduled",
+    "Completed",
+    "Canceled",
 ]
 FOCUSED_LABELS = [
     "Demand Repair", "Install", "Dispatch",
@@ -64,7 +70,7 @@ def extract_cards(html_bytes: bytes):
             m = DATE_PAT.search(text)
             if not m:
                 continue
-            d = parse_date(m.group(1))
+            d = parse_date(m.ggroup(1))
             if not d:
                 continue
             age = (today - d).days
