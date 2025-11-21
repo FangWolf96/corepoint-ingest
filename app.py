@@ -61,24 +61,37 @@ def extract_cards(html_bytes: bytes):
             continue
         column = header.get_text(" ", strip=True)
 
-        cards = outer.select("div.card") or outer.find_all("div", recursive=True)
+        # Only extract real cards
+        cards = outer.select("div.card")
+        if not cards:
+            continue
 
         for card in cards:
             text = card.get_text(" ", strip=True)
             if not text:
                 continue
+
             m = DATE_PAT.search(text)
             if not m:
                 continue
-            d = parse_date(m.ggroup(1))
+
+            d = parse_date(m.group(1))
             if not d:
                 continue
+
             age = (today - d).days
 
             pm = PRICE_PAT.search(text)
             price = int(pm.group(1).replace(",", "")) if pm else None
 
-            out.append({"column": column, "text": text, "date": d, "age": age, "price": price})
+            out.append({
+                "column": column,
+                "text": text,
+                "date": d,
+                "age": age,
+                "price": price
+            })
+
     return out
 
 def avg(xs):
@@ -98,7 +111,7 @@ def build_report(cards: list[dict]):
         scope_rows.append({
             "Scope": lbl,
             "Count": len(ages),
-            "Average Age (days)": avg(ages) if ages else 0
+            "Average Age (days)": avg(ages)
         })
 
     lane_rows = []
@@ -114,28 +127,26 @@ def build_report(cards: list[dict]):
     quoted_stats = [{
         "Total Value Count": len(active_prices),
         "Total Value": sum(active_prices) if active_prices else 0,
-        "Average Value": avg(active_prices) if active_prices else 0,
+        "Average Value": avg(active_prices),
         "Total Won Count": len(completed_prices),
         "Total Won": sum(completed_prices) if completed_prices else 0,
-        "Average Won": avg(completed_prices) if completed_prices else 0,
+        "Average Won": avg(completed_prices),
         "Total Lost Count": len(canceled_prices),
         "Total Lost": sum(canceled_prices) if canceled_prices else 0,
-        "Average Lost": avg(canceled_prices) if canceled_prices else 0
+        "Average Lost": avg(canceled_prices)
     }]
 
     all_label_rows = []
-    if ALL_LABELS:
-        for lbl in ALL_LABELS:
-            ages = [c["age"] for c in active if lbl.lower() in c["text"].lower()]
-            all_label_rows.append({"Label": lbl, "Count": len(ages), "Average Age (days)": avg(ages) if ages else 0})
+    for lbl in ALL_LABELS:
+        ages = [c["age"] for c in active if lbl.lower() in c["text"].lower()]
+        all_label_rows.append({"Label": lbl, "Count": len(ages), "Average Age (days)": avg(ages)})
 
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
         pd.DataFrame(scope_rows).to_excel(writer, sheet_name="Scope", index=False)
         pd.DataFrame(lane_rows).to_excel(writer, sheet_name="Lane", index=False)
         pd.DataFrame(quoted_stats).to_excel(writer, sheet_name="Quoted Prices", index=False)
-        if all_label_rows:
-            pd.DataFrame(all_label_rows).to_excel(writer, sheet_name="All Labels", index=False)
+        pd.DataFrame(all_label_rows).to_excel(writer, sheet_name="All Labels", index=False)
     output.seek(0)
 
     summary = {"scope": scope_rows, "lanes": lane_rows, "quoted": quoted_stats[0]}
@@ -160,7 +171,7 @@ INDEX_TMPL = """<!doctype html>
   <div class="row"><input type="file" name="file" accept=".html,.htm" required></div>
   <div class="row"><button class="btn" type="submit">Analyze</button></div>
 </form>
-<p style="color:#777;margin-top:10px">Defaults: exclude Completed, Canceled, New Parts Request from age stats. Prices are read from “Quoted Price $: …”.</p>
+<p style="color:#777;margin-top:10px">Defaults: exclude Completed & Canceled from age stats. Prices read from “Quoted Price $: …”.</p>
 """
 
 RESULT_TMPL = """<!doctype html>
